@@ -1,0 +1,157 @@
+---
+title: Reading in shapefiles in R
+author: Joe Brew and Raquel Catalão
+fig_height: 2.6
+fig_width: 4
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, comment = NA, error= FALSE, cache = FALSE}
+# No scientific notation
+options(scipen=999)
+
+# Packages 
+library(xtable)
+library(knitr)
+library(ggplot2) 
+library(dplyr)
+
+# Basic knitr options
+opts_chunk$set(comment = NA, 
+               echo = TRUE, 
+               warning = FALSE, 
+               message = FALSE, 
+               error = TRUE, # Render report, even with errors
+               cache = F)
+
+```
+
+```{r setup, include=FALSE, echo = FALSE}
+library(knitr)
+knit_engines$set(asis = function(options) {
+  if (options$echo && options$eval) knit_child(text = options$code)
+})
+```
+
+# Directories
+
+Make a folder called "data" and put it on your desktop. Download and unzip the shapefiles you sent into that folder. Then open an Rscript and save it to your desktop also. Call it "code.R" (or something else - it doesn't matter).
+
+Open your "code.R". Ensure that your "working directory" is your desktop. You can do this by running `getwd()`. If it is not your desktop, run `setwd("Path/To/Your/Desktop")` (and alter the preceding text).
+
+# Packages
+
+You'll need some packages.
+
+```{r}
+# Load the necessary libraries
+library(rgdal)
+library(raster)
+library(sp)
+library(leaflet)
+```
+
+If running the above gives you an error, it's because you need to install the `rgdal` package (or another one of the packages). Do so like this:
+
+```{r, eval = FALSE}
+install.packages('rgdal')
+```
+
+# Read in data
+
+Now you can use the `readOGR` function to read in your data. You were sent both "clip" data and "moz" data - we'll read in both shapefiles.
+
+```{r}
+clip <- readOGR('data', 'FACILITIES_CLIP')
+moz <- readOGR('data', 'FACILITIES_MOZ')
+```
+
+# Also get a Mozambican map
+
+While we're at it, let's also get a Mozambican map to plot on top of:
+
+```{r}
+map <- getData('GADM', country = 'MOZ', level = 1)
+```
+
+# Standardize coordiantes
+
+We need to standardize the coordinate and projection systems between our different data sources. We'll make everything latitude/longitude, for simplicity's sake.
+
+```{r}
+clip <- spTransform(clip, proj4string(map))
+moz <- spTransform(moz, proj4string(map))
+```
+
+
+# Visualize the data
+
+
+## Static visualization
+
+
+Here are all the points in the "Moz" shapefile you sent.
+```{r}
+# Plot the mozambican map
+plot(map)
+
+# Add points for all of mozambique
+points(moz, 
+       col = adjustcolor('black', alpha.f = 0.6))
+```
+
+Here are all the points in the "clip" shapefile you sent.
+
+```{r}
+# Plot the mozambican map
+plot(map)
+
+# Add points for all of mozambique
+points(clip, 
+       col = adjustcolor('darkred', alpha.f = 0.6))
+```
+
+Here's a zoom-in of just the clip area.
+
+```{r}
+# Subset our map
+sub_map <- map[map$NAME_1 %in% c('Maputo', 'Maputo City', 'Gaza'),]
+
+# Plot the subset map
+plot(sub_map)
+
+# Add points for all of mozambique
+points(clip, 
+       col = adjustcolor('darkred', alpha.f = 0.6))
+```
+
+# Interactive map
+
+Below is an interactive map of the clip area. Click on any point to see the location. Change the `addProviderTiles` line to make different kinds of maps (some examples are there, commented out).
+
+```{r}
+leaflet(sub_map) %>%
+  # addProviderTiles('Stamen.Watercolor') %>% 
+  # addProviderTiles("Esri.WorldImagery") %>%
+  addProviderTiles('OpenStreetMap.BlackAndWhite') %>%
+  addCircleMarkers(lng = clip$Longitude,
+                  lat = clip$Latitude,
+                  color = 'blue',
+                  fillColor = 'blue',
+                  radius = 5,
+                  opacity = 0,
+                  fillOpacity = 0.5,
+                  popup = clip$Nome_US) 
+```
+
+
+
+Hope this works for you! Let me know if you run into any problems.
+
+xx
+
+
